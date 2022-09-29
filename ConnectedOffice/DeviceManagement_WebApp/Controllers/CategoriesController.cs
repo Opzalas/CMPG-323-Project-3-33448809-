@@ -7,139 +7,125 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using DeviceManagement_WebApp.Data;
 using DeviceManagement_WebApp.Models;
+using Microsoft.AspNetCore.Authorization;
+using DeviceManagement_WebApp.Repository;
+using System.Data;
+using System.Security.Cryptography;
 
 namespace DeviceManagement_WebApp.Controllers
 {
+    [Authorize]
     public class CategoriesController : Controller
     {
-        private readonly ConnectedOfficeContext _context;
-
-        public CategoriesController(ConnectedOfficeContext context)
+        private readonly ICategorieRepository _categorieRepository;
+        public CategoriesController(ICategorieRepository categorieRepository)
         {
-            _context = context;
+            _categorieRepository = categorieRepository;
         }
+
 
         // GET: Categories
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Category.ToListAsync());
+            return View(_categorieRepository.GetAll());
         }
 
-        // GET: Categories/Details/5
-        public async Task<IActionResult> Details(Guid? id)
+        // GET: Categorie/Details/5
+        public ViewResult Details(Guid id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var category = await _context.Category
-                .FirstOrDefaultAsync(m => m.CategoryId == id);
-            if (category == null)
-            {
-                return NotFound();
-            }
-
+            Category category = _categorieRepository.GetCategoryByID(id);
             return View(category);
         }
 
-        // GET: Categories/Create
-        public IActionResult Create()
+        // GET: /Category/Create
+        public ActionResult Create()
         {
-            return View();
+            return View(new Category());
         }
-
-        // POST: Categories/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for 
-        // more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("CategoryId,CategoryName,CategoryDescription,DateCreated")] Category category)
+        public ActionResult Create(Category category)
         {
-            category.CategoryId = Guid.NewGuid();
-            _context.Add(category);
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
-        }
-
-        // GET: Categories/Edit/5
-        public async Task<IActionResult> Edit(Guid? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var category = await _context.Category.FindAsync(id);
-            if (category == null)
-            {
-                return NotFound();
-            }
-            return View(category);
-        }
-
-        // POST: Categories/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for 
-        // more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Guid id, [Bind("CategoryId,CategoryName,CategoryDescription,DateCreated")] Category category)
-        {
-            if (id != category.CategoryId)
-            {
-                return NotFound();
-            }
             try
             {
-                _context.Update(category);
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!CategoryExists(category.CategoryId))
+                if (ModelState.IsValid)
                 {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
+                    _categorieRepository.InsertCategory(category);
+                    _categorieRepository.Save();
+                    return RedirectToAction("Index");
                 }
             }
-            return RedirectToAction(nameof(Index));
-        }
-
-        // GET: Categories/Delete/5
-        public async Task<IActionResult> Delete(Guid? id)
-        {
-            if (id == null)
+            catch (DataException)
             {
-                return NotFound();
+                ModelState.AddModelError("", "Unable to save changes. Try again, and if the problem persists see your system administrator.");
             }
-
-            var category = await _context.Category
-                .FirstOrDefaultAsync(m => m.CategoryId == id);
-            if (category == null)
-            {
-                return NotFound();
-            }
-
             return View(category);
         }
 
-        // POST: Categories/Delete/5
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(Guid id)
+        // GET: Category/Edit/5
+        public ActionResult Edit(Guid id)
         {
-            var category = await _context.Category.FindAsync(id);
-            _context.Category.Remove(category);
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+            Category category = _categorieRepository.GetCategoryByID(id);
+            return View(category);
         }
 
-        private bool CategoryExists(Guid id)
+        [HttpPost]
+        public ActionResult Edit(Category category)
         {
-            return _context.Category.Any(e => e.CategoryId == id);
+            try
+            {
+                if (ModelState.IsValid)
+                {
+                    _categorieRepository.UpdateCategory(category);
+                    _categorieRepository.Save();
+                    return RedirectToAction("Index");
+                }
+            }
+            catch (DataException)
+            {
+                ModelState.AddModelError("", "Unable to save changes. Try again, and if the problem persists see your system administrator.");
+            }
+            return View(category);
         }
+
+
+        // GET: /Category/Delete/5
+
+        public ActionResult Delete(bool? saveChangesError = false, Guid categoryID)
+        {
+            if (saveChangesError.GetValueOrDefault())
+            {
+                ViewBag.ErrorMessage = "Delete failed. Try again, and if the problem persists see your system administrator.";
+            }
+            Category category = _categorieRepository.GetCategoryByID(categoryID);
+            return View(category);
+        }
+
+        //
+        // POST: /Category/Delete/5
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Delete(Guid id)
+        {
+            try
+            {
+                Category category = _categorieRepository.GetCategoryByID(id);
+                _categorieRepository.DeleteCategory(id);
+                _categorieRepository.Save();
+            }
+            catch (DataException /* dex */)
+            {
+                //Log the error (uncomment dex variable name after DataException and add a line here to write a log.
+                return RedirectToAction("Delete", new { id = id, saveChangesError = true });
+            }
+            return RedirectToAction("Index");
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            //_deviceRepository.DeleteDevice();
+            base.Dispose(disposing);
+        }
+
     }
 }
