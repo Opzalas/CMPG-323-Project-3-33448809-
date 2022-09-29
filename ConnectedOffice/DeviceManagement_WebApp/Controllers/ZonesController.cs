@@ -89,12 +89,8 @@ namespace DeviceManagement_WebApp.Controllers
 
         // GET: /Zone/Delete/5
 
-        public ActionResult Delete(bool? saveChangesError = false, Guid id = 0)
+        public ActionResult DeleteCategory(Guid id)
         {
-            if (saveChangesError.GetValueOrDefault())
-            {
-                ViewBag.ErrorMessage = "Delete failed. Try again, and if the problem persists see your system administrator.";
-            }
             Zone zone = _zoneRepository.GetZoneByID(id);
             return View(zone);
         }

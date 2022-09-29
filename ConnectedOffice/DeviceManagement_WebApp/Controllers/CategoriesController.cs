@@ -87,16 +87,12 @@ namespace DeviceManagement_WebApp.Controllers
             return View(category);
         }
 
-
+        
         // GET: /Category/Delete/5
 
-        public ActionResult Delete(bool? saveChangesError = false, Guid categoryID)
+        public ActionResult DeleteCategory(Guid id )
         {
-            if (saveChangesError.GetValueOrDefault())
-            {
-                ViewBag.ErrorMessage = "Delete failed. Try again, and if the problem persists see your system administrator.";
-            }
-            Category category = _categorieRepository.GetCategoryByID(categoryID);
+            Category category = _categorieRepository.GetCategoryByID(id);
             return View(category);
         }
 
